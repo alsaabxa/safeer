@@ -64,8 +64,21 @@ service cloud.firestore {
       return shortString(data, 'evidenceUrl', 2000)
         && (data.evidenceUrl == '' || data.evidenceUrl.matches('https://.*'));
     }
+    function validEvidenceLink(value) {
+      return value is string && value.size() > 0 && value.size() <= 2000
+        && value.matches('https://.*');
+    }
+    function validEvidenceLinks(data) {
+      return !('evidenceUrls' in data)
+        || (data.evidenceUrls is list && data.evidenceUrls.size() <= 5
+          && (data.evidenceUrls.size() < 1 || validEvidenceLink(data.evidenceUrls[0]))
+          && (data.evidenceUrls.size() < 2 || validEvidenceLink(data.evidenceUrls[1]))
+          && (data.evidenceUrls.size() < 3 || validEvidenceLink(data.evidenceUrls[2]))
+          && (data.evidenceUrls.size() < 4 || validEvidenceLink(data.evidenceUrls[3]))
+          && (data.evidenceUrls.size() < 5 || validEvidenceLink(data.evidenceUrls[4])));
+    }
     function validReport(data) {
-      return data.keys().hasOnly(['program','title','semester','date','beneficiary','beneficiariesCount','description','method','impact','notes','evidenceUrl','createdAt','updatedAt'])
+      return data.keys().hasOnly(['program','title','semester','date','beneficiary','beneficiariesCount','description','goal','method','impact','notes','evidenceUrl','evidenceUrls','createdAt','updatedAt'])
         && data.keys().hasAll(['program','title','semester','date','beneficiary','beneficiariesCount','description','method','impact','notes','evidenceUrl','createdAt','updatedAt'])
         && shortString(data,'program',100) && shortString(data,'title',180) && data.title.size() > 0
         && data.semester in ['الفصل الدراسي الأول','الفصل الدراسي الثاني']
@@ -73,7 +86,8 @@ service cloud.firestore {
         && data.beneficiariesCount is int && data.beneficiariesCount >= 0 && data.beneficiariesCount <= 1000000
         && shortString(data,'description',3000) && shortString(data,'method',3000)
         && shortString(data,'impact',3000) && shortString(data,'notes',2000)
-        && validEvidenceUrl(data);
+        && (!('goal' in data) || shortString(data,'goal',1000))
+        && validEvidenceUrl(data) && validEvidenceLinks(data);
     }
     function validEvidence(data) {
       return data.keys().hasOnly(['program','title','date','description','evidenceUrl','createdAt','updatedAt'])
