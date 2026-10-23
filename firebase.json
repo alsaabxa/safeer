@@ -6,9 +6,6 @@
     "location": "me-central2",
     "edition": "enterprise"
   },
-  "storage": {
-    "rules": "storage.rules"
-  },
   "hosting": {
     "public": "dist",
     "ignore": [
