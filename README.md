@@ -22,11 +22,11 @@ users/{uid}/reports/{reportId}
 users/{uid}/evidence/{evidenceId}
 ```
 
-كل مستخدم له مجموعات فرعية خاصة، وكل سجل مستند منفصل. تخزن المرفقات في Storage ضمن `users/{uid}/{reports|evidence}/{recordId}/...`، ويحتفظ Firestore بالبيانات الوصفية فقط. الاستعلامات تستخدم `createdAt` المفهرس تلقائيًا ولا تحتاج فهارس مركبة.
+كل مستخدم له مجموعات فرعية خاصة، وكل سجل مستند منفصل. تخزن المرفقات في Storage ضمن `users/{uid}/{reports|evidence}/{recordId}/...`، ويحتفظ Firestore بالبيانات الوصفية فقط. تستخدم المجموعات فهارس كثيفة `createdAt DESC` لتجنب المسح الكامل للمجموعات في Firestore Enterprise.
 
 ## الإعداد المحلي
 
-1. مشروع Firebase المرتبط هو `safeer-f0303` (اسم العرض `safeer`). تطبيق الويب `Safeer Web` أُنشئ فيه. Firestore API غير مفعّل في المشروع بعد، لذا لم يمكن التحقق من قاعدة موجودة؛ يلزم تفعيل API واختيار موقع قاعدة البيانات قبل نشر قواعد Firestore. اختر Firestore Standard عند الإنشاء.
+1. مشروع Firebase المرتبط هو `safeer-f0303` (اسم العرض `safeer`). تطبيق الويب `Safeer Web` أُنشئ فيه. قاعدة البيانات المحددة هي `safeer-main` في `me-central2` (الدمام) بإصدار Enterprise. يجب تفعيل Firestore API وإنشاء قاعدة البيانات بهذا المعرّف والموقع قبل نشر قواعد Firestore.
 2. أُعدّ `firebase.json` لتفعيل Email/Password عند نشر إعداد Authentication. أنشئ قاعدة Firestore وStorage إذا لم تكونا موجودتين.
 3. أضف `localhost` ونطاق الاستضافة لاحقًا إلى Authorized domains في Authentication.
 4. إعداد Firebase Web محفوظ محليًا في `.env.local`، وهو مستثنى من Git. لا ترفع هذا الملف.
@@ -41,17 +41,14 @@ npm run dev
 
 ## نشر Firebase
 
-بعد اختيار موقع Firestore وتفعيل Cloud Firestore API وإنشاء قاعدة البيانات وStorage، راجع القواعد على Emulator ثم انشر:
+بعد تفعيل Cloud Firestore API وإنشاء قاعدة `safeer-main` في `me-central2` وإنشاء Storage، انشر:
 
 ```bash
-npx firebase-tools login
-npx firebase-tools use YOUR_FIREBASE_PROJECT_ID
-npx firebase-tools deploy --only firestore:rules,firestore:indexes,storage
 npm run build
-npx firebase-tools deploy --only hosting
+npx firebase-tools deploy --only firestore,storage,auth,hosting
 ```
 
-ملف `.firebaserc` مضبوط على `safeer-f0303`. لا ترفع `.env.local` أو مفاتيح حساب الخدمة إلى Git. أُنشئ تطبيق Firebase Web؛ لم تُنشر القواعد أو الاستضافة بعد.
+ملف `.firebaserc` مضبوط على `safeer-f0303`. لا ترفع `.env.local` أو مفاتيح حساب الخدمة إلى Git. تعتمد شاشات البيانات على مستمعي `onSnapshot` للتحديث الفوري؛ لذلك تستخدم الاستعلامات التقليدية كاستثناء وظيفي، مع ترقيم النتائج إلى صفحات من 40 مستندًا.
 
 ## حدود ومراجعة قبل الإطلاق
 
