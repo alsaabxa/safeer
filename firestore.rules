@@ -43,46 +43,27 @@ service cloud.firestore {
         && data.status in ['لم يبدأ','قيد التنفيذ','مكتمل']
         && shortString(data,'notes',2000);
     }
-    function validFile(file, group) {
-      return file is map
-        && file.keys().hasOnly(['name','type','size','path'])
-        && file.keys().hasAll(['name','type','size','path'])
-        && file.name is string && file.name.size() <= 255
-        && file.type is string && file.type.size() <= 120
-        && file.size is int && file.size >= 0 && file.size <= 15728640
-        && file.path is string && file.path.size() <= 500
-        && file.path.matches('users/' + request.auth.uid + '/' + group + '/[^/]+/[^/]+');
-    }
-    function validFiles(files, group) {
-      return files is list && files.size() <= 10
-        && (files.size() < 1 || validFile(files[0],group))
-        && (files.size() < 2 || validFile(files[1],group))
-        && (files.size() < 3 || validFile(files[2],group))
-        && (files.size() < 4 || validFile(files[3],group))
-        && (files.size() < 5 || validFile(files[4],group))
-        && (files.size() < 6 || validFile(files[5],group))
-        && (files.size() < 7 || validFile(files[6],group))
-        && (files.size() < 8 || validFile(files[7],group))
-        && (files.size() < 9 || validFile(files[8],group))
-        && (files.size() < 10 || validFile(files[9],group));
+    function validEvidenceUrl(data) {
+      return shortString(data, 'evidenceUrl', 2000)
+        && (data.evidenceUrl == '' || data.evidenceUrl.matches('https://.*'));
     }
     function validReport(data) {
-      return data.keys().hasOnly(['program','title','semester','date','beneficiary','beneficiariesCount','description','method','impact','notes','files','createdAt','updatedAt'])
-        && data.keys().hasAll(['program','title','semester','date','beneficiary','beneficiariesCount','description','method','impact','notes','files','createdAt','updatedAt'])
+      return data.keys().hasOnly(['program','title','semester','date','beneficiary','beneficiariesCount','description','method','impact','notes','evidenceUrl','createdAt','updatedAt'])
+        && data.keys().hasAll(['program','title','semester','date','beneficiary','beneficiariesCount','description','method','impact','notes','evidenceUrl','createdAt','updatedAt'])
         && shortString(data,'program',100) && shortString(data,'title',180) && data.title.size() > 0
         && data.semester in ['الفصل الدراسي الأول','الفصل الدراسي الثاني']
         && shortString(data,'date',20) && shortString(data,'beneficiary',140)
         && data.beneficiariesCount is int && data.beneficiariesCount >= 0 && data.beneficiariesCount <= 1000000
         && shortString(data,'description',3000) && shortString(data,'method',3000)
         && shortString(data,'impact',3000) && shortString(data,'notes',2000)
-        && validFiles(data.files,'reports');
+        && validEvidenceUrl(data);
     }
     function validEvidence(data) {
-      return data.keys().hasOnly(['program','title','date','description','files','createdAt','updatedAt'])
-        && data.keys().hasAll(['program','title','date','description','files','createdAt','updatedAt'])
+      return data.keys().hasOnly(['program','title','date','description','evidenceUrl','createdAt','updatedAt'])
+        && data.keys().hasAll(['program','title','date','description','evidenceUrl','createdAt','updatedAt'])
         && shortString(data,'program',100) && shortString(data,'title',180) && data.title.size() > 0
         && shortString(data,'date',20) && shortString(data,'description',2000)
-        && validFiles(data.files,'evidence');
+        && validEvidenceUrl(data);
     }
 
     // Profiles are private and only the signed-in owner may access their own profile.
