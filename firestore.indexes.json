@@ -1,4 +1,8 @@
 {
-  "indexes": [],
+  "indexes": [
+    { "collectionGroup": "plans", "queryScope": "COLLECTION", "density": "DENSE", "fields": [{ "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "reports", "queryScope": "COLLECTION", "density": "DENSE", "fields": [{ "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "evidence", "queryScope": "COLLECTION", "density": "DENSE", "fields": [{ "fieldPath": "createdAt", "order": "DESCENDING" }] }
+  ],
   "fieldOverrides": []
 }
