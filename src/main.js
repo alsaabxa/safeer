@@ -1,5 +1,6 @@
 import { onAuthStateChanged, signOut, updateProfile } from 'firebase/auth';
 import { auth, missingFirebaseKeys } from './firebase.js';
+import { operationalPlan2026 } from './catalog.js';
 import {
   addPlan, deleteRecord, importOperationalPlan, loadOlder, saveEvidence,
   saveProfile, saveReport, updatePlanProgress, watchProfile, watchRecords,
@@ -52,11 +53,57 @@ function render(){
 }
 function appendOlder(kind,items,cursor,hasMore){const current=state[kind],ids=new Set(current.map((item)=>item.id));state[kind]=[...current,...items.filter((item)=>!ids.has(item.id))];state.pages[kind]={...state.pages[kind],cursor:cursor||state.pages[kind].cursor,hasMore,loading:false};render();}
 function findRecord(kind,id){return state[kind].find((item)=>item.id===id);}
+function reportActivities(program){
+  const templates=operationalPlan2026.map((item,index)=>({...item,key:`template-${index}`})).filter((item)=>item.program===program);
+  const seen=new Set(templates.map((item)=>item.title));
+  const custom=state.plans.filter((item)=>item.program===program&&!seen.has(item.title)).map((item)=>({...item,key:`plan-${item.id}`}));
+  return [...templates,...custom];
+}
+function updateReportActivityOptions(form,program){
+  const picker=form.elements.activityTemplate;
+  const options=reportActivities(program);
+  picker.innerHTML=`<option value="">${options.length?'اختر النشاط لتعبئة بياناته':'لا توجد أنشطة مسجلة لهذا البرنامج'}</option>${options.map((item)=>`<option value="${escapeText(item.key)}">${escapeText(item.title)}</option>`).join('')}`;
+}
+function updateExecutionPreview(form){
+  if(!form)return;
+  const values=Object.fromEntries(new FormData(form));
+  const preview={
+    program:values.program||'—','program-copy':values.program||'—',semester:values.semester||'—',
+    date:values.date||'—',title:values.title||'—',beneficiary:values.beneficiary||'—',
+    goal:values.goal||'—',description:values.description||'—',method:values.method||'—',
+    impact:values.impact||'يستكمل بعد التنفيذ.',beneficiariesCount:values.beneficiariesCount||'—',
+    notes:values.notes||'—',evidence:(values.evidenceUrls||'').split(/\r?\n/).map((item)=>item.trim()).filter(Boolean).join('\n')||'لا توجد روابط مضافة.',
+  };
+  host.querySelectorAll('[data-report-preview]').forEach((element)=>{element.textContent=preview[element.dataset.reportPreview]||'—';});
+}
+function fillReportFromActivity(form,activity){
+  if(!activity)return;
+  form.elements.title.value=activity.title||'';
+  form.elements.goal.value=`دعم هدف نشاط «${activity.title}» لدى ${activity.audience||'الفئة المستفيدة'} وفق الخطة التشغيلية للثقافة المؤسسية لعام 2026.`;
+  form.elements.date.value=activity.date||'';
+  form.elements.beneficiary.value=activity.audience||'';
+  form.elements.description.value=`مسودة: تنفيذ نشاط «${activity.title}» ضمن برنامج ${activity.program}. أضف تفاصيل التنفيذ الفعلي بعد انتهاء النشاط.`;
+  form.elements.method.value=activity.method||'';
+  form.elements.impact.value='';
+  form.elements.beneficiariesCount.value='';
+  updateExecutionPreview(form);
+}
+host.addEventListener('input',(event)=>{
+  const form=event.target.closest('#report-form');
+  if(form)updateExecutionPreview(form);
+});
 host.addEventListener('click',async(event)=>{
-  const navigate=event.target.closest('[data-navigate]');if(navigate){state.page=navigate.dataset.navigate;render();return;}
+  const navigate=event.target.closest('[data-navigate]');if(navigate){if(navigate.dataset.program)state.reportProgram=navigate.dataset.program;state.page=navigate.dataset.navigate;render();return;}
   const authMode=event.target.closest('[data-auth-mode]');if(authMode){state.authMode=authMode.dataset.authMode;state.authError='';render();return;}
   if(event.target.closest('[data-action="signout"]')){await signOut(auth);return;}
   if(event.target.closest('[data-action="print"]')){window.print();return;}
+  if(event.target.closest('[data-action="print-execution"]')){
+    updateExecutionPreview(host.querySelector('#report-form'));
+    document.body.classList.add('printing-execution');
+    const cleanup=()=>document.body.classList.remove('printing-execution');
+    window.addEventListener('afterprint',cleanup,{once:true});
+    window.print();setTimeout(cleanup,1500);return;
+  }
   if(event.target.closest('[data-action="import-plan"]')){
     const button=event.target.closest('[data-action="import-plan"]');if(state.busy)return;
     state.busy=true;button.disabled=true;button.textContent='جارٍ تحميل الخطة…';
@@ -70,6 +117,19 @@ host.addEventListener('click',async(event)=>{
   const deletion=event.target.closest('[data-delete-kind]');if(deletion){const kind=deletion.dataset.deleteKind,item=findRecord(kind,deletion.dataset.id);if(!item||!confirm('حذف هذا السجل؟'))return;try{await deleteRecord(state.user.uid,kind,item);toast('تم حذف السجل.');}catch(error){toast(errorText(error));}return;}
 });
 host.addEventListener('change',async(event)=>{
+  const reportForm=event.target.closest('#report-form');
+  if(reportForm&&event.target.name==='program'){
+    const hadSelectedActivity=Boolean(reportForm.elements.activityTemplate.value);
+    state.reportProgram=event.target.value;updateReportActivityOptions(reportForm,event.target.value);
+    if(hadSelectedActivity)for(const name of ['title','goal','date','beneficiary','description','method','impact','beneficiariesCount','notes','evidenceUrls'])reportForm.elements[name].value='';
+    updateExecutionPreview(reportForm);return;
+  }
+  if(reportForm&&event.target.name==='activityTemplate'){
+    const key=event.target.value;
+    const activity=key.startsWith('template-')?operationalPlan2026[Number(key.slice(9))]:state.plans.find((item)=>key===`plan-${item.id}`);
+    fillReportFromActivity(reportForm,activity);return;
+  }
+  if(reportForm){updateExecutionPreview(reportForm);return;}
   const change=event.target.closest('[data-plan-status], [data-plan-close]');if(!change)return;
   const item=findRecord('plans',change.dataset.planStatus||change.dataset.planClose);if(!item)return;
   const status=change.matches('[data-plan-status]')?change.value:item.status;
@@ -83,7 +143,7 @@ host.addEventListener('submit',async(event)=>{
     if(form.id==='auth-form'){state.authMode=form.dataset.mode;await submitAuth(form);state.authError='';}
     else if(form.id==='profile-form'){const values=Object.fromEntries(new FormData(form));values.name=values.name.trim();values.school=values.school.trim();await saveProfile(state.user.uid,values);if(values.name!==state.user.displayName)await updateProfile(state.user,{displayName:values.name});state.profile={...state.profile,...values};state.page='profile';toast('حُفظت بيانات الملف.');}
     else if(form.id==='plan-form'){await addPlan(state.user.uid,Object.fromEntries(new FormData(form)));form.reset();toast('أضيف النشاط إلى الخطة.');}
-    else if(form.id==='report-form'){const values=Object.fromEntries(new FormData(form));values.beneficiariesCount=Number(values.beneficiariesCount||0);await saveReport(state.user.uid,values);form.reset();toast('تم حفظ التقرير والشواهد.');}
+    else if(form.id==='report-form'){const values=Object.fromEntries(new FormData(form));values.beneficiariesCount=Number(values.beneficiariesCount||0);values.evidenceUrls=(values.evidenceUrls||'').split(/\r?\n/).map((item)=>item.trim()).filter(Boolean);delete values.activityTemplate;await saveReport(state.user.uid,values);form.reset();toast('تم حفظ التقرير والشواهد.');}
     else if(form.id==='evidence-form'){const values=Object.fromEntries(new FormData(form));await saveEvidence(state.user.uid,values);form.reset();toast('تم حفظ التوثيق.');}
   }catch(error){if(form.id==='auth-form'){state.authError=errorText(error);state.authMode=form.dataset.mode;}else toast(errorText(error));}
   finally{state.busy=false;render();}
