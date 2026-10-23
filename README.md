@@ -1,6 +1,6 @@
 # منصة سفير الثقافة المؤسسية
 
-تطبيق ويب عربي RTL لتخطيط برامج الثقافة المؤسسية وتوثيق الأنشطة والإنجازات والشواهد. أُنشئ المشروع في مساحة العمل من البداية لأن مستودع `alsaabxa/safeer` الذي تمت مراجعته كان فارغًا.
+تطبيق ويب عربي RTL لتخطيط برامج الثقافة المؤسسية وتوثيق الأنشطة والإنجازات والشواهد. أُنشئ المشروع من البداية داخل مستودع `alsaabxa/safeer`، ويرتبط بمشروع Firebase ذي المعرّف `safeer-f0303` واسمه الظاهر `safeer`.
 
 ## الوظائف
 
@@ -26,10 +26,10 @@ users/{uid}/evidence/{evidenceId}
 
 ## الإعداد المحلي
 
-1. أنشئ مشروع Firebase واختر موقع Firestore وفق متطلباتك. التنفيذ يفترض Firestore Standard؛ لم يكن هناك مشروع Firebase متصل حتى يمكن فحص إصدار قاعدة موجودة أو موقعها.
-2. أضف تطبيق Web إلى مشروعك، وفعّل Email/Password في Authentication، وأنشئ Firestore وStorage.
+1. مشروع Firebase المرتبط هو `safeer-f0303` (اسم العرض `safeer`). تطبيق الويب `Safeer Web` أُنشئ فيه. Firestore API غير مفعّل في المشروع بعد، لذا لم يمكن التحقق من قاعدة موجودة؛ يلزم تفعيل API واختيار موقع قاعدة البيانات قبل نشر قواعد Firestore. اختر Firestore Standard عند الإنشاء.
+2. أُعدّ `firebase.json` لتفعيل Email/Password عند نشر إعداد Authentication. أنشئ قاعدة Firestore وStorage إذا لم تكونا موجودتين.
 3. أضف `localhost` ونطاق الاستضافة لاحقًا إلى Authorized domains في Authentication.
-4. انسخ `.env.example` إلى `.env.local` وأدخل قيم Firebase Web SDK.
+4. إعداد Firebase Web محفوظ محليًا في `.env.local`، وهو مستثنى من Git. لا ترفع هذا الملف.
 5. ثبّت Node.js 20.19+ أو 22.12+، ثم شغّل:
 
 ```bash
@@ -39,9 +39,9 @@ npm run dev
 
 إذا لم تُضف إعدادات Firebase، يعرض التطبيق صفحة تشرح أسماء المتغيرات الناقصة.
 
-## نشر Firebase (لم يُنفّذ)
+## نشر Firebase
 
-بعد مراجعة القواعد على Emulator وتجهيز المشروع:
+بعد اختيار موقع Firestore وتفعيل Cloud Firestore API وإنشاء قاعدة البيانات وStorage، راجع القواعد على Emulator ثم انشر:
 
 ```bash
 npx firebase-tools login
@@ -51,7 +51,7 @@ npm run build
 npx firebase-tools deploy --only hosting
 ```
 
-حدّث `.firebaserc` بمعرّف مشروعك الحقيقي. لا ترفع `.env.local` أو مفاتيح حساب الخدمة إلى Git. لم يتم إنشاء مشروع Firebase أو تشغيل أوامر نشر أو رفع إلى GitHub.
+ملف `.firebaserc` مضبوط على `safeer-f0303`. لا ترفع `.env.local` أو مفاتيح حساب الخدمة إلى Git. أُنشئ تطبيق Firebase Web؛ لم تُنشر القواعد أو الاستضافة بعد.
 
 ## حدود ومراجعة قبل الإطلاق
 
