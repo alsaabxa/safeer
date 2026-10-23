@@ -1,3 +1,16 @@
+// Assumed data model: all user records are isolated under users/{uid}.
+// profile/main: name, school, schoolEmail (required strings); manager and
+// schoolYear (optional strings); createdAt and updatedAt (timestamps).
+// plans/{planId}: program, title, audience, date, status, notes (strings);
+// optional schedule, method, evidence and closeDate (bounded strings);
+// createdAt and updatedAt (timestamps). One document represents one activity.
+// reports/{reportId}: program, title, semester, date, beneficiary, description,
+// method, impact, notes and evidenceUrl (bounded strings), beneficiariesCount
+// (bounded integer), createdAt and updatedAt (timestamps).
+// evidence/{evidenceId}: program, title, date, description, evidenceUrl
+// (bounded strings), createdAt and updatedAt (timestamps). One document/link
+// represents one piece of evidence; a user may create many such documents.
+// All access is authenticated, owner-only, and profile-parent scoped.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -36,12 +49,16 @@ service cloud.firestore {
         && timestampIsCurrent(data.updatedAt);
     }
     function validPlan(data) {
-      return data.keys().hasOnly(['program','title','audience','date','status','notes','createdAt','updatedAt'])
+      return data.keys().hasOnly(['program','title','audience','date','schedule','method','evidence','closeDate','status','notes','createdAt','updatedAt'])
         && data.keys().hasAll(['program','title','audience','date','status','notes','createdAt','updatedAt'])
         && shortString(data,'program',100) && shortString(data,'title',180) && data.title.size() > 0
         && shortString(data,'audience',120) && shortString(data,'date',20)
         && data.status in ['لم يبدأ','قيد التنفيذ','مكتمل']
-        && shortString(data,'notes',2000);
+        && shortString(data,'notes',2000)
+        && (!('schedule' in data) || shortString(data,'schedule',120))
+        && (!('method' in data) || shortString(data,'method',1000))
+        && (!('evidence' in data) || shortString(data,'evidence',1000))
+        && (!('closeDate' in data) || shortString(data,'closeDate',10));
     }
     function validEvidenceUrl(data) {
       return shortString(data, 'evidenceUrl', 2000)
