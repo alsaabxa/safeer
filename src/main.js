@@ -1,7 +1,7 @@
 import { onAuthStateChanged, signOut, updateProfile } from 'firebase/auth';
 import { auth, missingFirebaseKeys } from './firebase.js';
 import {
-  addPlan, deleteRecord, downloadFile, loadOlder, saveEvidence,
+  addPlan, deleteRecord, loadOlder, saveEvidence,
   saveProfile, saveReport, setPlanStatus, watchProfile, watchRecords,
 } from './services/data.js';
 import { authView, escapeText, resetPassword, submitAuth } from './views/auth.js';
@@ -15,7 +15,7 @@ const errorText=(error)=>({
   'auth/email-already-in-use':'هذا البريد مسجل من قبل.','auth/invalid-email':'تحقق من صيغة البريد الإلكتروني.',
   'auth/invalid-credential':'البريد أو كلمة المرور غير صحيحة.','auth/weak-password':'استخدم كلمة مرور من 6 أحرف على الأقل.',
   'auth/too-many-requests':'محاولات كثيرة. انتظر قليلًا ثم أعد المحاولة.','permission-denied':'تعذر الوصول. تحقق من إعدادات Firebase وقواعد الأمان.',
-  'storage/unauthorized':'ليس لديك صلاحية لهذا الملف.','auth/user-not-found':'لا يوجد حساب بهذا البريد.'
+  'auth/user-not-found':'لا يوجد حساب بهذا البريد.'
 }[error?.code]||error?.message||'تعذر إتمام العملية. تحقق من الاتصال والإعدادات.');
 function toast(message){const item=document.createElement('div');item.className='toast';item.textContent=message;document.body.append(item);setTimeout(()=>item.remove(),3200);}
 function stopListeners(){state.stops.forEach((stop)=>stop());state.stops=[];}
@@ -59,8 +59,7 @@ host.addEventListener('click',async(event)=>{
   if(event.target.closest('[data-action="print"]')){window.print();return;}
   if(event.target.closest('[data-action="reset-password"]')){const email=host.querySelector('[name="email"]')?.value.trim();try{await resetPassword(email);toast('أرسلنا رابط إعادة تعيين كلمة المرور إلى بريدك.');}catch(error){state.authError=errorText(error);render();}return;}
   const load=event.target.closest('[data-load-older]');if(load){const kind=load.dataset.loadOlder,page=state.pages[kind],uid=state.user.uid;if(!page?.cursor||page.loading)return;state.pages[kind].loading=true;render();try{const result=await loadOlder(uid,kind,page.cursor);if(state.user?.uid===uid)appendOlder(kind,result.items,result.cursor,result.hasMore);}catch(error){state.pages[kind].loading=false;toast(errorText(error));render();}return;}
-  const deletion=event.target.closest('[data-delete-kind]');if(deletion){const kind=deletion.dataset.deleteKind,item=findRecord(kind,deletion.dataset.id);if(!item||!confirm('حذف هذا السجل ومرفقاته؟'))return;try{await deleteRecord(state.user.uid,kind,item);toast('تم حذف السجل.');}catch(error){toast(errorText(error));}return;}
-  const file=event.target.closest('[data-download-path]');if(file){try{const url=await downloadFile(file.dataset.downloadPath);const link=document.createElement('a');link.href=url;link.download=file.dataset.downloadName;link.rel='noopener';link.click();}catch(error){toast(errorText(error));}}
+  const deletion=event.target.closest('[data-delete-kind]');if(deletion){const kind=deletion.dataset.deleteKind,item=findRecord(kind,deletion.dataset.id);if(!item||!confirm('حذف هذا السجل؟'))return;try{await deleteRecord(state.user.uid,kind,item);toast('تم حذف السجل.');}catch(error){toast(errorText(error));}return;}
 });
 host.addEventListener('change',async(event)=>{
   const change=event.target.closest('[data-plan-status]');if(!change)return;
@@ -73,8 +72,8 @@ host.addEventListener('submit',async(event)=>{
     if(form.id==='auth-form'){state.authMode=form.dataset.mode;await submitAuth(form);state.authError='';}
     else if(form.id==='profile-form'){const values=Object.fromEntries(new FormData(form));values.name=values.name.trim();values.school=values.school.trim();await saveProfile(state.user.uid,values);if(values.name!==state.user.displayName)await updateProfile(state.user,{displayName:values.name});state.profile={...state.profile,...values};state.page='profile';toast('حُفظت بيانات الملف.');}
     else if(form.id==='plan-form'){await addPlan(state.user.uid,Object.fromEntries(new FormData(form)));form.reset();toast('أضيف النشاط إلى الخطة.');}
-    else if(form.id==='report-form'){const values=Object.fromEntries(new FormData(form));delete values.files;values.beneficiariesCount=Number(values.beneficiariesCount||0);await saveReport(state.user.uid,values,[...form.elements.files.files]);form.reset();toast('تم حفظ التقرير والشواهد.');}
-    else if(form.id==='evidence-form'){const values=Object.fromEntries(new FormData(form));delete values.files;await saveEvidence(state.user.uid,values,[...form.elements.files.files]);form.reset();toast('تم حفظ التوثيق.');}
+    else if(form.id==='report-form'){const values=Object.fromEntries(new FormData(form));values.beneficiariesCount=Number(values.beneficiariesCount||0);await saveReport(state.user.uid,values);form.reset();toast('تم حفظ التقرير والشواهد.');}
+    else if(form.id==='evidence-form'){const values=Object.fromEntries(new FormData(form));await saveEvidence(state.user.uid,values);form.reset();toast('تم حفظ التوثيق.');}
   }catch(error){if(form.id==='auth-form'){state.authError=errorText(error);state.authMode=form.dataset.mode;}else toast(errorText(error));}
   finally{state.busy=false;render();}
 });
