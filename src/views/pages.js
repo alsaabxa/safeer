@@ -1,5 +1,5 @@
 import { escapeText } from './auth.js';
-import { programs, semesters, statuses } from '../catalog.js';
+import { operationalPlan2026, programs, semesters, statuses } from '../catalog.js';
 
 const select = (name, items, selected = '') => `<select name="${name}">${items.map((value) => `<option ${selected === value ? 'selected' : ''}>${escapeText(value)}</option>`).join('')}</select>`;
 const header = (eyebrow, title, description, action = '') => `<header class="page-heading"><div><span class="eyebrow">${eyebrow}</span><h1>${title}</h1><p>${description}</p></div>${action}</header>`;
@@ -39,13 +39,19 @@ function profilePage(state) {
   </form></section>`;
 }
 function planPage(state) {
-  return `${header('التخطيط','الخطة التشغيلية','أضف الأنشطة، حدّث حالتها، وراجع ما أُنجز خلال العام.')}
+  const complete = state.plans.filter((item) => item.status === 'مكتمل').length;
+  const inProgress = state.plans.filter((item) => item.status === 'قيد التنفيذ').length;
+  const seeded = state.plans.filter((item) => item.id?.startsWith('operational-2026-')).length;
+  const importAction = `<button class="button primary" data-action="import-plan" ${seeded === operationalPlan2026.length ? 'disabled' : ''}>${seeded ? `استكمال خطة 2026 (${operationalPlan2026.length - seeded} متبقٍ)` : '＋ تحميل خطة 2026'}</button>`;
+  return `${header('التخطيط','الخطة التشغيلية','خطة 2026 وفق دليل سفير الثقافة وخطة سفراء الثقافة بالمدارس.', importAction)}
+  <section class="stats"><article><b>${state.plans.length}</b><span>إجمالي الأنشطة</span></article><article><b>${complete}</b><span>مكتمل</span></article><article><b>${inProgress}</b><span>قيد التنفيذ</span></article><article><b>${seeded} / ${operationalPlan2026.length}</b><span>أنشطة خطة 2026</span></article></section>
+  <div class="alert">يُنشئ التحميل أنشطة الخطة الـ${operationalPlan2026.length} كمستندات مستقلة في حسابك، ويمكن استكمال الأنشطة الناقصة لاحقًا دون تكرار السجلات أو تغيير حالاتها.</div>
   <section class="panel"><h2>إضافة نشاط إلى الخطة</h2><form id="plan-form" class="form-grid">
     <label>البرنامج${programSelect()}</label><label>النشاط<input name="title" maxlength="180" required></label>
     <label>الفئة المستفيدة<input name="audience" maxlength="120"></label><label>التوقيت<input name="date" type="date"></label>
     <label class="full">ملاحظات<textarea name="notes" maxlength="2000"></textarea></label>
     <div class="form-actions"><button class="button primary">إضافة إلى الخطة</button></div></form></section>
-    <section class="panel"><div class="section-head"><div><h2>أنشطة الخطة (${state.plans.length})</h2><p>غيّر الحالة من القائمة في كل صف.</p></div></div>${planTable(state.plans,state.pages.plans?.hasMore)}${moreButton('plans',state.pages.plans)}</section>`;
+    <section class="panel"><div class="section-head"><div><h2>أنشطة الخطة (${state.plans.length})</h2><p>حدّث حالة التنفيذ وتاريخ الإقفال، وافتح تفاصيل النشاط لمراجعة طريقة التنفيذ والشواهد المطلوبة.</p></div></div>${planTable(state.plans,state.pages.plans?.hasMore)}${moreButton('plans',state.pages.plans)}</section>`;
 }
 function reportsPage(state) {
   return `${header('التوثيق','تقارير الإنجاز','وثّق التنفيذ والفئة المستفيدة والأثر، وأرفق الشواهد.', '<button class="button subtle" data-action="print">⎙ طباعة</button>')}
@@ -82,7 +88,7 @@ function portfolioPage(state) {
 }
 function planTable(items,hasMore) {
   if(!items.length)return blank('لم تضف نشاطًا إلى الخطة بعد.');
-  return `<div class="table-wrap"><table><thead><tr><th>البرنامج</th><th>النشاط</th><th>الفئة</th><th>التوقيت</th><th>الحالة</th><th class="no-print">إجراء</th></tr></thead><tbody>${items.map((item)=>`<tr><td>${escapeText(item.program)}</td><td><b>${escapeText(item.title)}</b>${item.notes?`<small>${escapeText(item.notes)}</small>`:''}</td><td>${escapeText(item.audience||'—')}</td><td>${escapeText(item.date||'—')}</td><td><select aria-label="حالة النشاط" data-plan-status="${item.id}">${statuses.map((value)=>`<option ${value===item.status?'selected':''}>${value}</option>`).join('')}</select></td><td class="no-print"><button class="danger" data-delete-kind="plans" data-id="${item.id}">حذف</button></td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="table-wrap"><table><thead><tr><th>البرنامج</th><th>النشاط وطريقة التنفيذ</th><th>الفئة</th><th>التوقيت</th><th>الحالة</th><th>تاريخ الإقفال</th><th class="no-print">إجراء</th></tr></thead><tbody>${items.map((item)=>`<tr><td>${escapeText(item.program||'—')}</td><td><b>${escapeText(item.title)}</b>${item.notes?`<small>${escapeText(item.notes)}</small>`:''}<details class="plan-details"><summary>التنفيذ والشواهد</summary><div><b>طريقة التنفيذ</b><p>${escapeText(item.method||item.notes||'أضف وصف التنفيذ في الملاحظات.')}</p><b>الشواهد المقترحة</b><p>${escapeText(item.evidence||'تقرير مختصر، صور التنفيذ، وروابط المواد المستخدمة.')}</p></div></details></td><td>${escapeText(item.audience||'—')}</td><td>${escapeText(item.schedule||item.date||'—')}</td><td><select aria-label="حالة النشاط" data-plan-status="${item.id}">${statuses.map((value)=>`<option ${value===(item.status||statuses[0])?'selected':''}>${escapeText(value)}</option>`).join('')}</select></td><td><input aria-label="تاريخ إقفال النشاط" type="date" data-plan-close="${item.id}" value="${escapeText(item.closeDate||'')}" ${item.status!=='مكتمل'?'disabled':''}></td><td class="no-print"><button class="danger" data-delete-kind="plans" data-id="${item.id}">حذف</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 function reportTable(items,allowDelete) {
   if(!items.length)return blank('لا توجد تقارير حتى الآن.');
@@ -92,5 +98,5 @@ function evidenceList(items,allowDelete=true) {
   if(!items.length)return blank('لا توجد شواهد حتى الآن.');
   return `<div class="evidence-list">${items.map((item)=>`<article class="evidence-row"><div class="evidence-description"><span class="pill">${escapeText(item.program)}</span><h3>${escapeText(item.title)}</h3><p>${escapeText(item.description||'')}</p><small>${escapeText(item.date||'')}</small></div><div class="file-list">${evidenceLink(item.evidenceUrl)}</div>${allowDelete?`<button class="danger no-print" data-delete-kind="evidence" data-id="${item.id}">حذف</button>`:''}</article>`).join('')}</div>`;
 }
-function evidenceLink(url='') { return url?.startsWith('https://') ? `<a class="link-button" href="${escapeText(url)}" target="_blank" rel="noopener noreferrer">فتح الشاهد ↗</a>` : '—'; }
+function evidenceLink(url='') { return url?.startsWith('https://')?`<a class="link-button" href="${escapeText(url)}" target="_blank" rel="noopener noreferrer">فتح الشاهد ↗</a>`:'—'; }
 function moreButton(kind,page) { return page?.hasMore?`<div class="load-more no-print"><button class="button subtle" data-load-older="${kind}" ${page.loading?'disabled':''}>${page.loading?'جارٍ التحميل…':'تحميل سجلات أقدم'}</button></div>`:''; }
