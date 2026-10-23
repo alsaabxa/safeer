@@ -25,7 +25,7 @@ service cloud.firestore {
     function timestampIsCurrent(value) {
       return value is timestamp && value == request.time;
     }
-    function validProfileCreate(uid) {
+    function validProfileCreate() {
       let data = request.resource.data;
       return data.keys().hasOnly(['name','school','manager','schoolEmail','schoolYear','createdAt','updatedAt'])
         && data.keys().hasAll(['name','school','schoolEmail','createdAt','updatedAt'])
@@ -86,7 +86,7 @@ service cloud.firestore {
     // Profiles are private and only the signed-in owner may access their own profile.
     match /users/{uid}/profile/{profileId} {
       allow read: if owns(uid) && profileId == 'main';
-      allow create: if owns(uid) && profileId == 'main' && validProfileCreate(uid);
+      allow create: if owns(uid) && profileId == 'main' && validProfileCreate();
       allow update: if owns(uid) && profileId == 'main' && validProfileUpdate();
       allow delete: if false;
     }
