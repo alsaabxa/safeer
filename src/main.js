@@ -1,8 +1,8 @@
 import { onAuthStateChanged, signOut, updateProfile } from 'firebase/auth';
 import { auth, missingFirebaseKeys } from './firebase.js';
 import {
-  addPlan, deleteRecord, loadOlder, saveEvidence,
-  saveProfile, saveReport, setPlanStatus, watchProfile, watchRecords,
+  addPlan, deleteRecord, importOperationalPlan, loadOlder, saveEvidence,
+  saveProfile, saveReport, updatePlanProgress, watchProfile, watchRecords,
 } from './services/data.js';
 import { authView, escapeText, resetPassword, submitAuth } from './views/auth.js';
 import { renderPage } from './views/pages.js';
@@ -57,13 +57,24 @@ host.addEventListener('click',async(event)=>{
   const authMode=event.target.closest('[data-auth-mode]');if(authMode){state.authMode=authMode.dataset.authMode;state.authError='';render();return;}
   if(event.target.closest('[data-action="signout"]')){await signOut(auth);return;}
   if(event.target.closest('[data-action="print"]')){window.print();return;}
+  if(event.target.closest('[data-action="import-plan"]')){
+    const button=event.target.closest('[data-action="import-plan"]');if(state.busy)return;
+    state.busy=true;button.disabled=true;button.textContent='جارٍ تحميل الخطة…';
+    try{const count=await importOperationalPlan(state.user.uid);toast(count?`تمت إضافة ${count} نشاطًا إلى خطتك.`:'أنشطة خطة 2026 موجودة بالفعل.');}
+    catch(error){toast(errorText(error));}
+    finally{state.busy=false;render();}
+    return;
+  }
   if(event.target.closest('[data-action="reset-password"]')){const email=host.querySelector('[name="email"]')?.value.trim();try{await resetPassword(email);toast('أرسلنا رابط إعادة تعيين كلمة المرور إلى بريدك.');}catch(error){state.authError=errorText(error);render();}return;}
   const load=event.target.closest('[data-load-older]');if(load){const kind=load.dataset.loadOlder,page=state.pages[kind],uid=state.user.uid;if(!page?.cursor||page.loading)return;state.pages[kind].loading=true;render();try{const result=await loadOlder(uid,kind,page.cursor);if(state.user?.uid===uid)appendOlder(kind,result.items,result.cursor,result.hasMore);}catch(error){state.pages[kind].loading=false;toast(errorText(error));render();}return;}
   const deletion=event.target.closest('[data-delete-kind]');if(deletion){const kind=deletion.dataset.deleteKind,item=findRecord(kind,deletion.dataset.id);if(!item||!confirm('حذف هذا السجل؟'))return;try{await deleteRecord(state.user.uid,kind,item);toast('تم حذف السجل.');}catch(error){toast(errorText(error));}return;}
 });
 host.addEventListener('change',async(event)=>{
-  const change=event.target.closest('[data-plan-status]');if(!change)return;
-  try{await setPlanStatus(state.user.uid,change.dataset.planStatus,change.value);toast('تم تحديث حالة النشاط.');}
+  const change=event.target.closest('[data-plan-status], [data-plan-close]');if(!change)return;
+  const item=findRecord('plans',change.dataset.planStatus||change.dataset.planClose);if(!item)return;
+  const status=change.matches('[data-plan-status]')?change.value:item.status;
+  const closeDate=change.matches('[data-plan-close]')?change.value:(item.closeDate||'');
+  try{await updatePlanProgress(state.user.uid,item.id,{status,closeDate});toast(change.matches('[data-plan-close]')?'تم حفظ تاريخ الإقفال.':'تم تحديث حالة النشاط.');}
   catch(error){toast(errorText(error));render();}
 });
 host.addEventListener('submit',async(event)=>{
