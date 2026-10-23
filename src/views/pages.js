@@ -5,6 +5,18 @@ const select = (name, items, selected = '') => `<select name="${name}">${items.m
 const header = (eyebrow, title, description, action = '') => `<header class="page-heading"><div><span class="eyebrow">${eyebrow}</span><h1>${title}</h1><p>${description}</p></div>${action}</header>`;
 const programSelect = () => select('program', programs.map((program) => program.name));
 const blank = (message) => `<div class="empty-state"><span>✳</span><p>${message}</p></div>`;
+function reportActivities(program, state) {
+  const templates = operationalPlan2026.map((item, index) => ({ ...item, key: `template-${index}` }))
+    .filter((item) => item.program === program);
+  const seen = new Set(templates.map((item) => item.title));
+  const custom = state.plans.filter((item) => item.program === program && !seen.has(item.title))
+    .map((item) => ({ ...item, key: `plan-${item.id}` }));
+  return [...templates, ...custom];
+}
+function activityOptions(program, state) {
+  const activities = reportActivities(program, state);
+  return `<option value="">${activities.length ? 'اختر النشاط لتعبئة بياناته' : 'لا توجد أنشطة مسجلة لهذا البرنامج'}</option>${activities.map((item) => `<option value="${escapeText(item.key)}">${escapeText(item.title)}</option>`).join('')}`;
+}
 
 export function renderPage(page, state) {
   switch (page) {
@@ -54,18 +66,31 @@ function planPage(state) {
     <section class="panel"><div class="section-head"><div><h2>أنشطة الخطة (${state.plans.length})</h2><p>حدّث حالة التنفيذ وتاريخ الإقفال، وافتح تفاصيل النشاط لمراجعة طريقة التنفيذ والشواهد المطلوبة.</p></div></div>${planTable(state.plans,state.pages.plans?.hasMore)}${moreButton('plans',state.pages.plans)}</section>`;
 }
 function reportsPage(state) {
-  return `${header('التوثيق','تقارير الإنجاز','وثّق التنفيذ والفئة المستفيدة والأثر، وأرفق الشواهد.', '<button class="button subtle" data-action="print">⎙ طباعة</button>')}
-  <section class="panel"><h2>تقرير جديد</h2><form id="report-form" class="form-grid">
-    <label>البرنامج${programSelect()}</label><label>عنوان النشاط<input name="title" maxlength="180" required></label>
-    <label>الفصل الدراسي${select('semester',semesters)}</label><label>تاريخ التنفيذ<input name="date" type="date"></label>
-    <label>الفئة المستفيدة<input name="beneficiary" maxlength="140"></label><label>عدد المستفيدين<input name="beneficiariesCount" type="number" min="0" max="1000000"></label>
-    <label class="full">وصف العمل<textarea name="description" maxlength="3000"></textarea></label>
+  const selectedProgram = state.reportProgram || programs[0].name;
+  const templateLink = '<a class="button subtle" href="https://github.com/alsaabxa/safeer/blob/main/templates/activity-report-template.md" target="_blank" rel="noopener noreferrer">📄 قالب ورقة التنفيذ</a>';
+  return `${header('التوثيق','تقارير الإنجاز','اختر البرنامج والنشاط لتعبئة بيانات الخطة تلقائيًا، ثم أكمل ما تحقق فعليًا.', templateLink)}
+  <section class="panel report-entry-panel"><div class="section-head"><div><h2>نموذج تنفيذ نشاط</h2><p>تُملأ بيانات النشاط المخططة من الدليل. أضف تاريخ التنفيذ الفعلي والنتائج بعد إتمامه.</p></div><button class="button subtle no-print" type="button" data-action="print-execution">⎙ معاينة وطباعة ورقة التنفيذ</button></div><form id="report-form" class="form-grid">
+    <label>البرنامج${select('program', programs.map((program) => program.name), selectedProgram)}</label>
+    <label>النشاط${`<select name="activityTemplate">${activityOptions(selectedProgram, state)}</select>`}</label>
+    <label>عنوان التقرير<input name="title" maxlength="180" required></label><label>العام/الفصل الدراسي${select('semester',semesters)}</label>
+    <label>تاريخ التنفيذ الفعلي<input name="date" type="date"><small>قد يُعبأ بالموعد الوارد في الخطة؛ تحقق من تاريخ التنفيذ الفعلي.</small></label><label>الفئة المستفيدة<input name="beneficiary" maxlength="140"></label>
+    <label class="full">الهدف<input name="goal" maxlength="1000" placeholder="يُعبأ من النشاط المختار"></label>
+    <label class="full">وصف النشاط/العمل<textarea name="description" maxlength="3000"></textarea></label>
     <label class="full">آلية التطبيق<textarea name="method" maxlength="3000"></textarea></label>
-    <label class="full">الأثر والنتائج<textarea name="impact" maxlength="3000"></textarea></label>
+    <label>عدد المستفيدين الفعلي<input name="beneficiariesCount" type="number" min="0" max="1000000"></label>
+    <label class="full">الأثر والنتائج الفعلية<textarea name="impact" maxlength="3000" placeholder="أدخل النتائج بعد التنفيذ؛ لا تُملأ تلقائيًا حتى لا تُفترض نتائج غير موثقة."></textarea></label>
     <label class="full">ملاحظات المتابعة<textarea name="notes" maxlength="2000"></textarea></label>
-    <label class="full">رابط الشاهد الإلكتروني (اختياري)<input name="evidenceUrl" type="url" maxlength="2000" placeholder="https://..."><small>ارفع المستند إلى مساحة مدرستك أو Google Drive، ثم أضف رابط مشاركة يبدأ بـ https://.</small></label>
+    <label class="full">روابط ملفات الشواهد (رابط HTTPS في كل سطر)<textarea name="evidenceUrls" maxlength="10000" placeholder="https://..."></textarea><small>ارفع الملفات إلى مساحة المدرسة أو Google Drive/OneDrive، واضبط صلاحية الرابط حسب سياسة المدرسة. يدعم النموذج حتى 5 روابط؛ خطة Spark لا ترفع الملفات مباشرة إلى Firebase.</small></label>
     <div class="form-actions"><button class="button primary">حفظ التقرير</button></div>
   </form></section>
+  <section id="execution-sheet" class="execution-sheet" aria-live="polite">
+    <div class="sheet-heading"><img class="ministry-logo" src="/ministry-logo.svg" alt="وزارة التعليم"><div><small>سفير الثقافة المؤسسية · نموذج التوثيق</small><h2>ورقة تنفيذ نشاط</h2><p data-report-preview="program">${escapeText(selectedProgram)}</p></div><span class="sheet-label">2026</span></div>
+    <div class="sheet-grid"><div><small>اسم المدرسة</small><b>${escapeText(state.profile.school||'—')}</b></div><div><small>السفير/ة</small><b>${escapeText(state.profile.name||state.user?.displayName||'—')}</b></div><div><small>الفصل الدراسي</small><b data-report-preview="semester">الفصل الدراسي الأول</b></div><div><small>تاريخ التنفيذ</small><b data-report-preview="date">—</b></div></div>
+    <div class="sheet-section"><h3>بيانات النشاط</h3><div class="sheet-grid"><div><small>البرنامج</small><b data-report-preview="program-copy">${escapeText(selectedProgram)}</b></div><div><small>عنوان النشاط</small><b data-report-preview="title">—</b></div><div class="wide"><small>الفئة المستفيدة</small><b data-report-preview="beneficiary">—</b></div><div class="wide"><small>الهدف</small><p data-report-preview="goal">—</p></div></div></div>
+    <div class="sheet-section"><h3>التنفيذ والأثر</h3><div class="sheet-grid"><div class="wide"><small>وصف النشاط</small><p data-report-preview="description">—</p></div><div class="wide"><small>آلية التطبيق</small><p data-report-preview="method">—</p></div><div class="wide"><small>الأثر والنتائج</small><p data-report-preview="impact">يستكمل بعد التنفيذ.</p></div><div><small>عدد المستفيدين</small><b data-report-preview="beneficiariesCount">—</b></div><div><small>ملاحظات</small><p data-report-preview="notes">—</p></div></div></div>
+    <div class="sheet-section"><h3>الشواهد والمرفقات</h3><div data-report-preview="evidence">لا توجد روابط مضافة.</div></div>
+    <div class="sheet-signatures"><div>إعداد السفير/ة</div><div>اعتماد قائد/ة المدرسة</div><div>التاريخ والتوقيع</div></div>
+  </section>
   <section class="panel"><div class="section-head"><h2>سجل التقارير</h2><span class="pill">${state.reports.length} سجل ظاهر</span></div>${reportTable(state.reports,true)}${moreButton('reports',state.pages.reports)}</section>`;
 }
 function evidencePage(state) {
@@ -92,11 +117,15 @@ function planTable(items,hasMore) {
 }
 function reportTable(items,allowDelete) {
   if(!items.length)return blank('لا توجد تقارير حتى الآن.');
-  return `<div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>البرنامج والنشاط</th><th>المستفيدون</th><th>العمل والأثر</th><th>الشواهد</th>${allowDelete?'<th class="no-print">إجراء</th>':''}</tr></thead><tbody>${items.map((item)=>`<tr><td>${escapeText(item.date||'—')}<small>${escapeText(item.semester||'')}</small></td><td><b>${escapeText(item.title)}</b><small>${escapeText(item.program)}</small></td><td>${escapeText(item.beneficiary||'—')}<small>${item.beneficiariesCount?`${escapeText(item.beneficiariesCount)} مستفيد`:''}</small></td><td>${escapeText(item.description||'—')}<small>${escapeText(item.impact||'')}</small></td><td>${evidenceLink(item.evidenceUrl)}</td>${allowDelete?`<td class="no-print"><button class="danger" data-delete-kind="reports" data-id="${item.id}">حذف</button></td>`:''}</tr>`).join('')}</tbody></table></div>`;
+  return `<div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>البرنامج والنشاط</th><th>المستفيدون</th><th>العمل والأثر</th><th>الشواهد</th>${allowDelete?'<th class="no-print">إجراء</th>':''}</tr></thead><tbody>${items.map((item)=>`<tr><td>${escapeText(item.date||'—')}<small>${escapeText(item.semester||'')}</small></td><td><b>${escapeText(item.title)}</b><small>${escapeText(item.program)}</small></td><td>${escapeText(item.beneficiary||'—')}<small>${item.beneficiariesCount?`${escapeText(item.beneficiariesCount)} مستفيد`:''}</small></td><td>${escapeText(item.description||'—')}<small>${escapeText(item.impact||item.goal||'')}</small></td><td>${reportEvidenceLinks(item)}</td>${allowDelete?`<td class="no-print"><button class="danger" data-delete-kind="reports" data-id="${item.id}">حذف</button></td>`:''}</tr>`).join('')}</tbody></table></div>`;
+}
+function reportEvidenceLinks(item) {
+  const links = item.evidenceUrls?.length ? item.evidenceUrls : (item.evidenceUrl ? [item.evidenceUrl] : []);
+  return links.length ? links.map((url, index) => `<div>${evidenceLink(url, `شاهد ${index + 1}`)}</div>`).join('') : '—';
 }
 function evidenceList(items,allowDelete=true) {
   if(!items.length)return blank('لا توجد شواهد حتى الآن.');
   return `<div class="evidence-list">${items.map((item)=>`<article class="evidence-row"><div class="evidence-description"><span class="pill">${escapeText(item.program)}</span><h3>${escapeText(item.title)}</h3><p>${escapeText(item.description||'')}</p><small>${escapeText(item.date||'')}</small></div><div class="file-list">${evidenceLink(item.evidenceUrl)}</div>${allowDelete?`<button class="danger no-print" data-delete-kind="evidence" data-id="${item.id}">حذف</button>`:''}</article>`).join('')}</div>`;
 }
-function evidenceLink(url='') { return url?.startsWith('https://')?`<a class="link-button" href="${escapeText(url)}" target="_blank" rel="noopener noreferrer">فتح الشاهد ↗</a>`:'—'; }
+function evidenceLink(url='',label='فتح الشاهد ↗') { return url?.startsWith('https://')?`<a class="link-button" href="${escapeText(url)}" target="_blank" rel="noopener noreferrer">${escapeText(label)}</a>`:'—'; }
 function moreButton(kind,page) { return page?.hasMore?`<div class="load-more no-print"><button class="button subtle" data-load-older="${kind}" ${page.loading?'disabled':''}>${page.loading?'جارٍ التحميل…':'تحميل سجلات أقدم'}</button></div>`:''; }
