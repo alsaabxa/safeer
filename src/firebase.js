@@ -20,5 +20,6 @@ if (missingFirebaseKeys.length === 0) {
   });
 }
 export const auth = app ? getAuth(app) : null;
-export const firestore = app ? getFirestore(app) : null;
+// Enterprise Native Mode uses an explicitly named, non-default database.
+export const firestore = app ? getFirestore(app, 'safeer-main') : null;
 export const storage = app ? getStorage(app) : null;
