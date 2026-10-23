@@ -69,11 +69,17 @@ export async function saveEvidence(uid, values) {
 }
 async function saveRecord(uid, kind, values) {
   const target = doc(root(uid, kind));
-  const evidenceUrl = (values.evidenceUrl || '').trim();
-  if (evidenceUrl && (!evidenceUrl.startsWith('https://') || evidenceUrl.length > 2000)) {
-    throw new Error('أدخل رابطًا آمنًا يبدأ بـ https:// ولا يتجاوز 2000 حرف.');
+  const evidenceUrls = kind === 'reports'
+    ? (Array.isArray(values.evidenceUrls) ? values.evidenceUrls : [values.evidenceUrl || '']).map((url) => String(url).trim()).filter(Boolean)
+    : [(values.evidenceUrl || '').trim()].filter(Boolean);
+  if (evidenceUrls.length > 5) throw new Error('يمكن إضافة خمسة روابط شواهد كحد أقصى للتقرير.');
+  if (evidenceUrls.some((url) => !url.startsWith('https://') || url.length > 2000)) {
+    throw new Error('يجب أن يبدأ كل رابط شاهد بـ https:// وألا يتجاوز 2000 حرف.');
   }
-  await setDoc(target, { ...values, evidenceUrl, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  const recordValues = kind === 'reports'
+    ? { ...values, evidenceUrl: evidenceUrls[0] || '', evidenceUrls }
+    : { ...values, evidenceUrl: evidenceUrls[0] || '' };
+  await setDoc(target, { ...recordValues, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   return target.id;
 }
 export async function deleteRecord(uid, kind, item) {
