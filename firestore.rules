@@ -1,0 +1,122 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function owns(uid) { return signedIn() && request.auth.uid == uid; }
+    function profileExists(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)/profile/main);
+    }
+    function shortString(data, key, maxLength) {
+      return data[key] is string && data[key].size() <= maxLength;
+    }
+    function timestampIsCurrent(value) {
+      return value is timestamp && value == request.time;
+    }
+    function validProfileCreate(uid) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['name','school','manager','schoolEmail','schoolYear','createdAt','updatedAt'])
+        && data.keys().hasAll(['name','school','schoolEmail','createdAt','updatedAt'])
+        && shortString(data,'name',100) && data.name.size() > 0
+        && shortString(data,'school',140) && data.school.size() > 0
+        && shortString(data,'schoolEmail',254)
+        && (!('manager' in data) || shortString(data,'manager',100))
+        && (!('schoolYear' in data) || shortString(data,'schoolYear',30))
+        && timestampIsCurrent(data.createdAt) && timestampIsCurrent(data.updatedAt);
+    }
+    function validProfileUpdate() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['name','school','manager','schoolEmail','schoolYear','createdAt','updatedAt'])
+        && data.keys().hasAll(['name','school','schoolEmail','createdAt','updatedAt'])
+        && shortString(data,'name',100) && data.name.size() > 0
+        && shortString(data,'school',140) && data.school.size() > 0
+        && shortString(data,'schoolEmail',254)
+        && (!('manager' in data) || shortString(data,'manager',100))
+        && (!('schoolYear' in data) || shortString(data,'schoolYear',30))
+        && data.createdAt == resource.data.createdAt
+        && timestampIsCurrent(data.updatedAt);
+    }
+    function validPlan(data) {
+      return data.keys().hasOnly(['program','title','audience','date','status','notes','createdAt','updatedAt'])
+        && data.keys().hasAll(['program','title','audience','date','status','notes','createdAt','updatedAt'])
+        && shortString(data,'program',100) && shortString(data,'title',180) && data.title.size() > 0
+        && shortString(data,'audience',120) && shortString(data,'date',20)
+        && data.status in ['لم يبدأ','قيد التنفيذ','مكتمل']
+        && shortString(data,'notes',2000);
+    }
+    function validFile(file, group) {
+      return file is map
+        && file.keys().hasOnly(['name','type','size','path'])
+        && file.keys().hasAll(['name','type','size','path'])
+        && file.name is string && file.name.size() <= 255
+        && file.type is string && file.type.size() <= 120
+        && file.size is int && file.size >= 0 && file.size <= 15728640
+        && file.path is string && file.path.size() <= 500
+        && file.path.matches('users/' + request.auth.uid + '/' + group + '/[^/]+/[^/]+');
+    }
+    function validFiles(files, group) {
+      return files is list && files.size() <= 10
+        && (files.size() < 1 || validFile(files[0],group))
+        && (files.size() < 2 || validFile(files[1],group))
+        && (files.size() < 3 || validFile(files[2],group))
+        && (files.size() < 4 || validFile(files[3],group))
+        && (files.size() < 5 || validFile(files[4],group))
+        && (files.size() < 6 || validFile(files[5],group))
+        && (files.size() < 7 || validFile(files[6],group))
+        && (files.size() < 8 || validFile(files[7],group))
+        && (files.size() < 9 || validFile(files[8],group))
+        && (files.size() < 10 || validFile(files[9],group));
+    }
+    function validReport(data) {
+      return data.keys().hasOnly(['program','title','semester','date','beneficiary','beneficiariesCount','description','method','impact','notes','files','createdAt','updatedAt'])
+        && data.keys().hasAll(['program','title','semester','date','beneficiary','beneficiariesCount','description','method','impact','notes','files','createdAt','updatedAt'])
+        && shortString(data,'program',100) && shortString(data,'title',180) && data.title.size() > 0
+        && data.semester in ['الفصل الدراسي الأول','الفصل الدراسي الثاني']
+        && shortString(data,'date',20) && shortString(data,'beneficiary',140)
+        && data.beneficiariesCount is int && data.beneficiariesCount >= 0 && data.beneficiariesCount <= 1000000
+        && shortString(data,'description',3000) && shortString(data,'method',3000)
+        && shortString(data,'impact',3000) && shortString(data,'notes',2000)
+        && validFiles(data.files,'reports');
+    }
+    function validEvidence(data) {
+      return data.keys().hasOnly(['program','title','date','description','files','createdAt','updatedAt'])
+        && data.keys().hasAll(['program','title','date','description','files','createdAt','updatedAt'])
+        && shortString(data,'program',100) && shortString(data,'title',180) && data.title.size() > 0
+        && shortString(data,'date',20) && shortString(data,'description',2000)
+        && validFiles(data.files,'evidence');
+    }
+
+    // Profiles are private and only the signed-in owner may access their own profile.
+    match /users/{uid}/profile/{profileId} {
+      allow read: if owns(uid) && profileId == 'main';
+      allow create: if owns(uid) && profileId == 'main' && validProfileCreate(uid);
+      allow update: if owns(uid) && profileId == 'main' && validProfileUpdate();
+      allow delete: if false;
+    }
+
+    // Each user's plans, reports, and evidence are stored as separate documents.
+    // Requiring the profile parent blocks orphaned subcollection access.
+    match /users/{uid}/{group}/{recordId} {
+      function canAccessOwnData() { return owns(uid) && profileExists(uid); }
+      allow read: if canAccessOwnData() && group in ['plans','reports','evidence'];
+      allow create: if canAccessOwnData()
+        && ((group == 'plans' && validPlan(request.resource.data)
+              && timestampIsCurrent(request.resource.data.createdAt)
+              && timestampIsCurrent(request.resource.data.updatedAt))
+          || (group == 'reports' && validReport(request.resource.data)
+              && timestampIsCurrent(request.resource.data.createdAt)
+              && timestampIsCurrent(request.resource.data.updatedAt))
+          || (group == 'evidence' && validEvidence(request.resource.data)
+              && timestampIsCurrent(request.resource.data.createdAt)
+              && timestampIsCurrent(request.resource.data.updatedAt)));
+      allow update: if canAccessOwnData()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && timestampIsCurrent(request.resource.data.updatedAt)
+        && ((group == 'plans' && validPlan(request.resource.data))
+          || (group == 'reports' && validReport(request.resource.data))
+          || (group == 'evidence' && validEvidence(request.resource.data)));
+      allow delete: if canAccessOwnData() && group in ['plans','reports','evidence'];
+    }
+    // No access to unmodeled documents or global user directories.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

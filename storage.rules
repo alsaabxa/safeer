@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function owns(uid) { return request.auth != null && request.auth.uid == uid; }
+    function profileExists(uid) {
+      return firestore.exists(/databases/(default)/documents/users/$(uid)/profile/main);
+    }
+    match /users/{uid}/{group}/{recordId}/{fileName} {
+      allow read: if owns(uid) && profileExists(uid) && group in ['reports','evidence'];
+      allow create: if owns(uid) && profileExists(uid)
+        && group in ['reports','evidence']
+        && request.resource.size <= 15 * 1024 * 1024
+        && request.resource.contentType.matches('(image/.*|application/pdf|application/msword|application/vnd\\.ms-powerpoint|application/vnd\\.openxmlformats-officedocument\\..*)');
+      allow delete: if owns(uid) && profileExists(uid) && group in ['reports','evidence'];
+      allow update: if false;
+    }
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}
