@@ -1,7 +1,10 @@
 {
   "firestore": {
     "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
+    "indexes": "firestore.indexes.json",
+    "database": "safeer-main",
+    "location": "me-central2",
+    "edition": "enterprise"
   },
   "storage": {
     "rules": "storage.rules"
