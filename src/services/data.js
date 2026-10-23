@@ -1,8 +1,9 @@
 import {
   addDoc, collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query,
-  serverTimestamp, setDoc, startAfter, updateDoc, getDocs,
+  serverTimestamp, setDoc, startAfter, updateDoc, getDocs, writeBatch,
 } from 'firebase/firestore';
 import { firestore } from '../firebase.js';
+import { operationalPlan2026 } from '../catalog.js';
 
 const PAGE_SIZE = 40;
 const root = (uid, kind) => collection(firestore, 'users', uid, kind);
@@ -26,10 +27,39 @@ export async function saveProfile(uid, profile) {
   await setDoc(path, { ...profile, ...(old.exists() ? {} : { createdAt: serverTimestamp() }), updatedAt: serverTimestamp() }, { merge: true });
 }
 export async function addPlan(uid, values) {
-  return addDoc(root(uid, 'plans'), { ...values, status: 'لم يبدأ', createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  return addDoc(root(uid, 'plans'), { ...values, schedule: values.schedule || values.date || '', method: values.method || '', evidence: values.evidence || '', closeDate: '', status: 'لم يبدأ', createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
 }
 export async function setPlanStatus(uid, id, status) {
   return updateDoc(record(uid, 'plans', id), { status, updatedAt: serverTimestamp() });
+}
+export async function updatePlanProgress(uid, id, values) {
+  return updateDoc(record(uid, 'plans', id), {
+    status: values.status,
+    closeDate: values.closeDate || '',
+    updatedAt: serverTimestamp(),
+  });
+}
+export async function importOperationalPlan(uid) {
+  const targets = await Promise.all(operationalPlan2026.map(async (activity, index) => {
+    const id = `operational-2026-${String(index + 1).padStart(2, '0')}`;
+    const ref = record(uid, 'plans', id);
+    return (await getDoc(ref)).exists() ? null : { ref, activity };
+  }));
+  const missing = targets.filter(Boolean);
+  if (!missing.length) return 0;
+  const batch = writeBatch(firestore);
+  for (const { ref, activity } of missing) {
+    batch.set(ref, {
+      ...activity,
+      notes: '',
+      closeDate: '',
+      status: 'لم يبدأ',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+  await batch.commit();
+  return missing.length;
 }
 export async function saveReport(uid, values) {
   return saveRecord(uid, 'reports', values);
