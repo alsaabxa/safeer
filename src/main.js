@@ -12,6 +12,8 @@ import './style.css';
 const host=document.querySelector('#app');
 const groups=['plans','reports','evidence'];
 const state={user:null,profile:{},page:'home',plans:[],reports:[],evidence:[],pages:{},stops:[],busy:false};
+let reportAttachments=[];
+function clearReportAttachments(){reportAttachments.forEach(({url})=>URL.revokeObjectURL(url));reportAttachments=[];}
 const errorText=(error)=>({
   'auth/email-already-in-use':'هذا البريد مسجل من قبل.','auth/invalid-email':'تحقق من صيغة البريد الإلكتروني.',
   'auth/invalid-credential':'البريد أو كلمة المرور غير صحيحة.','auth/weak-password':'استخدم كلمة مرور من 6 أحرف على الأقل.',
@@ -26,7 +28,7 @@ function syncGroup(kind,latest,cursor,hasMore){
   const page=state.pages[kind]||{};state.pages[kind]={cursor:cursor||page.cursor,hasMore:hasMore||page.hasMore,loading:false};
   if(state.user)render();
 }
-function observeUser(user){stopListeners();state.user=user;
+function observeUser(user){stopListeners();clearReportAttachments();state.user=user;
   state.profile={};state.plans=[];state.reports=[];state.evidence=[];state.pages={};state.profileReady=false;
   if(!user){state.page='home';render();return;}
   state.pages={};
@@ -50,6 +52,7 @@ function render(){
     const missing=missingFirebaseKeys.length?`<div class="setup-note"><b>إعداد Firebase مطلوب</b><p>أنشئ ملف <code>.env.local</code> في جذر المشروع وأضف إعدادات تطبيق الويب، ثم أعد تشغيل التطبيق.</p><small>القيم الناقصة: ${missingFirebaseKeys.map(escapeText).join('، ')}</small></div>`:'';
     host.innerHTML=`${missing}<div id="auth-slot">${authView({mode:state.authMode||'signin',error:state.authError||'',busy:state.busy||missingFirebaseKeys.length>0})}</div>`;
   }
+  const reportForm=host.querySelector('#report-form');if(reportForm)updateExecutionPreview(reportForm);
 }
 function appendOlder(kind,items,cursor,hasMore){const current=state[kind],ids=new Set(current.map((item)=>item.id));state[kind]=[...current,...items.filter((item)=>!ids.has(item.id))];state.pages[kind]={...state.pages[kind],cursor:cursor||state.pages[kind].cursor,hasMore,loading:false};render();}
 function findRecord(kind,id){return state[kind].find((item)=>item.id===id);}
@@ -75,6 +78,8 @@ function updateExecutionPreview(form){
     notes:values.notes||'—',evidence:(values.evidenceUrls||'').split(/\r?\n/).map((item)=>item.trim()).filter(Boolean).join('\n')||'لا توجد روابط مضافة.',
   };
   host.querySelectorAll('[data-report-preview]').forEach((element)=>{element.textContent=preview[element.dataset.reportPreview]||'—';});
+  const attachments=host.querySelector('[data-report-attachments]');
+  if(attachments)attachments.innerHTML=reportAttachments.map(({file,url},index)=>`<figure class="sheet-photo"><img src="${url}" alt="شاهد ${index+1}"><figcaption>${escapeText(file.name)}</figcaption></figure>`).join('');
 }
 function fillReportFromActivity(form,activity){
   if(!activity)return;
@@ -118,6 +123,14 @@ host.addEventListener('click',async(event)=>{
 });
 host.addEventListener('change',async(event)=>{
   const reportForm=event.target.closest('#report-form');
+  if(reportForm&&event.target.name==='evidenceFiles'){
+    const files=[...event.target.files];
+    if(files.length>5||files.some((file)=>!file.type.startsWith('image/')||file.size>5*1024*1024)){
+      event.target.value='';toast('اختر حتى 5 صور، لا يتجاوز حجم الصورة 5 ميغابايت.');return;
+    }
+    clearReportAttachments();reportAttachments=files.map((file)=>({file,url:URL.createObjectURL(file)}));
+    updateExecutionPreview(reportForm);return;
+  }
   if(reportForm&&event.target.name==='program'){
     const hadSelectedActivity=Boolean(reportForm.elements.activityTemplate.value);
     state.reportProgram=event.target.value;updateReportActivityOptions(reportForm,event.target.value);
@@ -143,7 +156,7 @@ host.addEventListener('submit',async(event)=>{
     if(form.id==='auth-form'){state.authMode=form.dataset.mode;await submitAuth(form);state.authError='';}
     else if(form.id==='profile-form'){const values=Object.fromEntries(new FormData(form));values.name=values.name.trim();values.school=values.school.trim();await saveProfile(state.user.uid,values);if(values.name!==state.user.displayName)await updateProfile(state.user,{displayName:values.name});state.profile={...state.profile,...values};state.page='profile';toast('حُفظت بيانات الملف.');}
     else if(form.id==='plan-form'){await addPlan(state.user.uid,Object.fromEntries(new FormData(form)));form.reset();toast('أضيف النشاط إلى الخطة.');}
-    else if(form.id==='report-form'){const values=Object.fromEntries(new FormData(form));values.beneficiariesCount=Number(values.beneficiariesCount||0);values.evidenceUrls=(values.evidenceUrls||'').split(/\r?\n/).map((item)=>item.trim()).filter(Boolean);delete values.activityTemplate;await saveReport(state.user.uid,values);form.reset();toast('تم حفظ التقرير والشواهد.');}
+    else if(form.id==='report-form'){const values=Object.fromEntries(new FormData(form));values.beneficiariesCount=Number(values.beneficiariesCount||0);values.evidenceUrls=(values.evidenceUrls||'').split(/\r?\n/).map((item)=>item.trim()).filter(Boolean);delete values.activityTemplate;delete values.evidenceFiles;await saveReport(state.user.uid,values);clearReportAttachments();form.reset();toast('تم حفظ بيانات التقرير. اطبع ورقة التنفيذ قبل مغادرة الصفحة لحفظ الصور المرفقة.');}
     else if(form.id==='evidence-form'){const values=Object.fromEntries(new FormData(form));await saveEvidence(state.user.uid,values);form.reset();toast('تم حفظ التوثيق.');}
   }catch(error){if(form.id==='auth-form'){state.authError=errorText(error);state.authMode=form.dataset.mode;}else toast(errorText(error));}
   finally{state.busy=false;render();}
