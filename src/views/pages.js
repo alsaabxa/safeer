@@ -81,6 +81,7 @@ function reportsPage(state) {
     <label class="full">الأثر والنتائج الفعلية<textarea name="impact" maxlength="3000" placeholder="أدخل النتائج بعد التنفيذ؛ لا تُملأ تلقائيًا حتى لا تُفترض نتائج غير موثقة."></textarea></label>
     <label class="full">ملاحظات المتابعة<textarea name="notes" maxlength="2000"></textarea></label>
     <label class="full">روابط ملفات الشواهد (رابط HTTPS في كل سطر)<textarea name="evidenceUrls" maxlength="10000" placeholder="https://..."></textarea><small>ارفع الملفات إلى مساحة المدرسة أو Google Drive/OneDrive، واضبط صلاحية الرابط حسب سياسة المدرسة. يدعم النموذج حتى 5 روابط؛ خطة Spark لا ترفع الملفات مباشرة إلى Firebase.</small></label>
+    <label class="full">صور الشواهد من جهازك<input name="evidenceFiles" type="file" accept="image/*" multiple><small>أرفق حتى 5 صور، بحد 5 ميغابايت للصورة. تظهر الصور في ورقة الطباعة خلال هذه الجلسة، ولا تُرفع أو تُشارك مع مستخدمين آخرين. لحفظها ضمن تقريرك، اطبع الورقة إلى PDF ثم احفظه في مساحتك الخاصة.</small></label>
     <div class="form-actions"><button class="button primary">حفظ التقرير</button></div>
   </form></section>
   <section id="execution-sheet" class="execution-sheet" aria-live="polite">
@@ -88,7 +89,7 @@ function reportsPage(state) {
     <div class="sheet-grid"><div><small>اسم المدرسة</small><b>${escapeText(state.profile.school||'—')}</b></div><div><small>السفير/ة</small><b>${escapeText(state.profile.name||state.user?.displayName||'—')}</b></div><div><small>الفصل الدراسي</small><b data-report-preview="semester">الفصل الدراسي الأول</b></div><div><small>تاريخ التنفيذ</small><b data-report-preview="date">—</b></div></div>
     <div class="sheet-section"><h3>بيانات النشاط</h3><div class="sheet-grid"><div><small>البرنامج</small><b data-report-preview="program-copy">${escapeText(selectedProgram)}</b></div><div><small>عنوان النشاط</small><b data-report-preview="title">—</b></div><div class="wide"><small>الفئة المستفيدة</small><b data-report-preview="beneficiary">—</b></div><div class="wide"><small>الهدف</small><p data-report-preview="goal">—</p></div></div></div>
     <div class="sheet-section"><h3>التنفيذ والأثر</h3><div class="sheet-grid"><div class="wide"><small>وصف النشاط</small><p data-report-preview="description">—</p></div><div class="wide"><small>آلية التطبيق</small><p data-report-preview="method">—</p></div><div class="wide"><small>الأثر والنتائج</small><p data-report-preview="impact">يستكمل بعد التنفيذ.</p></div><div><small>عدد المستفيدين</small><b data-report-preview="beneficiariesCount">—</b></div><div><small>ملاحظات</small><p data-report-preview="notes">—</p></div></div></div>
-    <div class="sheet-section"><h3>الشواهد والمرفقات</h3><div data-report-preview="evidence">لا توجد روابط مضافة.</div></div>
+    <div class="sheet-section"><h3>الشواهد والمرفقات</h3><div data-report-preview="evidence">لا توجد روابط مضافة.</div><div class="sheet-photo-grid" data-report-attachments></div></div>
     <div class="sheet-signatures"><div>إعداد السفير/ة</div><div>اعتماد قائد/ة المدرسة</div><div>التاريخ والتوقيع</div></div>
   </section>
   <section class="panel"><div class="section-head"><h2>سجل التقارير</h2><span class="pill">${state.reports.length} سجل ظاهر</span></div>${reportTable(state.reports,true)}${moreButton('reports',state.pages.reports)}</section>`;
