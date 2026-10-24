@@ -52,6 +52,12 @@ function render(){
     const missing=missingFirebaseKeys.length?`<div class="setup-note"><b>إعداد Firebase مطلوب</b><p>أنشئ ملف <code>.env.local</code> في جذر المشروع وأضف إعدادات تطبيق الويب، ثم أعد تشغيل التطبيق.</p><small>القيم الناقصة: ${missingFirebaseKeys.map(escapeText).join('، ')}</small></div>`:'';
     host.innerHTML=`${missing}<div id="auth-slot">${authView({mode:state.authMode||'signin',error:state.authError||'',busy:state.busy||missingFirebaseKeys.length>0})}</div>`;
   }
+  const portfolioFrame=host.querySelector('#portfolio-frame');
+  if(portfolioFrame&&state.user){
+    const sendOwner=()=>portfolioFrame.contentWindow?.postMessage({type:'safeer-portfolio-owner',uid:state.user.uid},location.origin);
+    portfolioFrame.addEventListener('load',sendOwner);
+    try{if(portfolioFrame.contentDocument?.readyState==='complete')sendOwner();}catch{}
+  }
   const reportForm=host.querySelector('#report-form');if(reportForm)updateExecutionPreview(reportForm);
 }
 function appendOlder(kind,items,cursor,hasMore){const current=state[kind],ids=new Set(current.map((item)=>item.id));state[kind]=[...current,...items.filter((item)=>!ids.has(item.id))];state.pages[kind]={...state.pages[kind],cursor:cursor||state.pages[kind].cursor,hasMore,loading:false};render();}
