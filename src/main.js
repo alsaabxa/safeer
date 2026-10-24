@@ -46,7 +46,7 @@ function observeUser(user){stopListeners();clearReportAttachments();state.user=u
 }
 function render(){
   if(!missingFirebaseKeys.length&&state.user){
-    const labels=[['home','⌂','لوحة المتابعة'],['plan','▤','الخطة'],['reports','＋','التقارير'],['evidence','▣','الشواهد'],['portfolio','▧','ملف الإنجاز'],['profile','♙','الملف الشخصي']];
+    const labels=[['home','⌂','لوحة المتابعة'],['plan','▤','الخطة'],['reports','＋','التقارير'],['report-library','▧','تقارير 2026'],['evidence','▣','الشواهد'],['portfolio','▧','ملف الإنجاز'],['profile','♙','الملف الشخصي']];
     host.innerHTML=`<div class="app-shell"><header class="topbar"><div class="brand-lockup"><span class="brand-mark small">س</span><div><b>سفير الثقافة المؤسسية</b><small>منصة التوثيق والإنجاز</small></div></div><div class="account"><span class="avatar">${escapeText((state.profile.name||state.user.displayName||state.user.email||'س').slice(0,1))}</span><div><b>${escapeText(state.profile.name||state.user.displayName||'السفير/ة')}</b><small>${escapeText(state.profile.school||state.user.email||'')}</small></div><button class="button ghost" data-action="signout">خروج</button></div></header><nav class="nav">${labels.map(([id,icon,label])=>`<button class="${state.page===id?'active':''}" data-navigate="${id}"><span>${icon}</span>${label}</button>`).join('')}</nav><main class="content">${renderPage(state.page,state)}</main></div>`;
   } else {
     const missing=missingFirebaseKeys.length?`<div class="setup-note"><b>إعداد Firebase مطلوب</b><p>أنشئ ملف <code>.env.local</code> في جذر المشروع وأضف إعدادات تطبيق الويب، ثم أعد تشغيل التطبيق.</p><small>القيم الناقصة: ${missingFirebaseKeys.map(escapeText).join('، ')}</small></div>`:'';
