@@ -26,6 +26,7 @@ export function renderPage(page, state) {
     case 'report-library': return reportLibraryPage();
     case 'evidence': return evidencePage(state);
     case 'portfolio': return portfolioPage(state);
+    case 'portfolio-summary': return portfolioSummaryPage(state);
     default: return homePage(state);
   }
 }
@@ -114,6 +115,13 @@ function evidencePage(state) {
   <section class="panel"><div class="section-head"><h2>سجل الشواهد</h2><span class="pill">${state.evidence.length} سجل ظاهر</span></div>${evidenceList(state.evidence)}${moreButton('evidence',state.pages.evidence)}</section>`;
 }
 function portfolioPage(state) {
+  return `${header('ملف الإنجاز','ملف إنجاز الثقافة المؤسسية','أضف بياناتك وشواهدك، ثم جهّز الملف للطباعة أو التنزيل بصيغة PDF.', '<button class="button subtle" data-navigate="portfolio-summary">ملخص تقاريري في المنصة</button>')}
+    <section class="panel portfolio-library-panel">
+      <div class="portfolio-library-note"><span>ⓘ</span><p>تُحفظ بيانات هذا الملف وصوره في مساحة منفصلة لهذا الحساب على هذا الجهاز. لا تُرفع الصور إلى Firebase ولا يراها مستخدمو الحسابات الأخرى.</p></div>
+      <iframe id="portfolio-frame" class="portfolio-library-frame" src="/portfolio.html" title="ملف إنجاز سفير/ة الثقافة المؤسسية" loading="eager" referrerpolicy="same-origin"></iframe>
+    </section>`;
+}
+function portfolioSummaryPage(state) {
   const p=state.profile;
   return `${header('ملخص الإنجاز','ملف الإنجاز','نسخة منظمة للطباعة أو الحفظ بصيغة PDF.','<button class="button primary" data-action="print">⎙ طباعة / حفظ PDF</button>')}
     <section class="portfolio-cover"><span class="brand-mark">س</span><div><small>ملف سفير/ة الثقافة المؤسسية · ${escapeText(p.schoolYear||'')}</small><h2>${escapeText(p.school||'اسم المدرسة')}</h2><p>${escapeText(p.name||state.user?.displayName||'')} · ${escapeText(p.manager||'')}</p></div></section>
