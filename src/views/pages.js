@@ -115,7 +115,9 @@ function evidencePage(state) {
   <section class="panel"><div class="section-head"><h2>سجل الشواهد</h2><span class="pill">${state.evidence.length} سجل ظاهر</span></div>${evidenceList(state.evidence)}${moreButton('evidence',state.pages.evidence)}</section>`;
 }
 function portfolioPage(state) {
-  return `${header('ملف الإنجاز','ملف إنجاز الثقافة المؤسسية','أضف بياناتك وشواهدك، ثم جهّز الملف للطباعة أو التنزيل بصيغة PDF.', '<button class="button subtle" data-navigate="portfolio-summary">ملخص تقاريري في المنصة</button>')}
+  const externalPortfolio = 'https://alsaabxa.github.io/safeer-re/portfolio.html';
+  const actions = `<div style="display:flex;flex-wrap:wrap;gap:8px"><a class="button subtle" href="${externalPortfolio}" target="_blank" rel="noopener noreferrer">فتح ملف الإنجاز الخارجي مع QR ↗</a><button class="button subtle" data-navigate="portfolio-summary">ملخص تقاريري في المنصة</button></div>`;
+  return `${header('ملف الإنجاز','ملف إنجاز الثقافة المؤسسية','أضف بياناتك وشواهدك، ثم جهّز الملف للطباعة أو التنزيل بصيغة PDF.', actions)}
     <section class="panel portfolio-library-panel">
       <div class="portfolio-library-note"><span>ⓘ</span><p>تُحفظ بيانات هذا الملف وصوره في مساحة منفصلة لهذا الحساب على هذا الجهاز. لا تُرفع الصور إلى Firebase ولا يراها مستخدمو الحسابات الأخرى.</p></div>
       <iframe id="portfolio-frame" class="portfolio-library-frame" src="/portfolio.html" title="ملف إنجاز سفير/ة الثقافة المؤسسية" loading="eager" referrerpolicy="same-origin"></iframe>
