@@ -23,10 +23,19 @@ export function renderPage(page, state) {
     case 'profile': return profilePage(state);
     case 'plan': return planPage(state);
     case 'reports': return reportsPage(state);
+    case 'report-library': return reportLibraryPage();
     case 'evidence': return evidencePage(state);
     case 'portfolio': return portfolioPage(state);
     default: return homePage(state);
   }
+}
+function reportLibraryPage() {
+  const url = 'https://alsaabxa.github.io/safeer-re/';
+  return `${header('نماذج التوثيق','تقارير الخطة التشغيلية 2026','أنشئ تقارير الأنشطة وأرفق الشواهد واطبع ورقة التنفيذ.', `<a class="button subtle" href="${url}" target="_blank" rel="noopener noreferrer">فتح في نافذة مستقلة ↗</a>`)}
+    <section class="panel report-library-panel">
+      <div class="report-library-note"><span>ⓘ</span><p>تُحفظ بيانات هذا النموذج في متصفحك على هذا الجهاز. لا تُحفظ في سجلات Firebase ولا تظهر تلقائيًا لمستخدمين آخرين. استخدم التصدير والاستيراد لنقل نسختك بين الأجهزة.</p></div>
+      <iframe class="report-library-frame" src="${url}" title="تقارير سفيرة الثقافة المؤسسية" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-downloads"></iframe>
+    </section>`;
 }
 function homePage(state) {
   const complete = state.plans.filter((item) => item.status === 'مكتمل').length;
