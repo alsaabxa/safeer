@@ -22,14 +22,14 @@ button.alt{background:var(--g);color:#253A3A}button.ghost{background:transparent
 small,.hint{color:#6b8593;font-size:13px;display:block;margin-top:6px}
 .it{display:flex;gap:8px;align-items:center;margin-top:8px}.it img{width:44px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--ln)}
 #pages{transform-origin:top right}
-.pg{position:relative;width:1123px;height:632px;background:var(--bg);overflow:hidden;margin:0 auto 14px;box-shadow:0 2px 10px #0002;font-size:15px}
-.sb{position:absolute;top:0;right:0;width:130px;height:100%;background:var(--t);color:#fff;text-align:center;padding:18px 8px;font-size:13px;line-height:1.8}
+.pg{position:relative;width:720px;height:1280px;background:var(--bg);overflow:hidden;margin:0 auto 14px;box-shadow:0 2px 10px #0002;font-size:15px}
+.sb{position:absolute;top:0;right:0;width:100px;height:100%;background:var(--t);color:#fff;text-align:center;padding:18px 8px;font-size:13px;line-height:1.8}
 .sb:before{content:"";position:absolute;left:12px;bottom:14px;width:70px;height:70px;background:radial-gradient(rgba(255,255,255,.55) 1.5px,transparent 2px) 0 0/12px 12px}
 .sb img{display:block;margin:0 auto 14px}
-.ct{position:absolute;top:0;right:130px;left:0;bottom:34px;padding:26px 36px}
+.ct{position:absolute;top:0;right:100px;left:0;bottom:34px;padding:26px 24px}
 .pt{font-size:26px;font-weight:700;color:var(--t);border-bottom:3px solid var(--g);display:inline-block;padding-bottom:4px;margin-bottom:16px}
-.fo{position:absolute;bottom:0;left:0;right:130px;height:34px;color:var(--t);font-size:12px;display:flex;justify-content:space-between;align-items:center;padding:0 36px;border-top:1px solid var(--ln)}
-.gr{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;height:470px}
+.fo{position:absolute;bottom:0;left:0;right:100px;height:34px;color:var(--t);font-size:12px;display:flex;justify-content:space-between;align-items:center;padding:0 24px;border-top:1px solid var(--ln)}
+.gr{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;height:980px}
 .cd{background:#fff;border:1.5px solid var(--g);border-radius:16px;display:flex;flex-direction:column;padding:8px;min-height:0}
 .cd .im{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:10px;overflow:hidden}
 .cd img{max-width:100%;max-height:100%;object-fit:contain}
@@ -45,7 +45,7 @@ small,.hint{color:#6b8593;font-size:13px;display:block;margin-top:6px}
 .cvb h2{font-size:44px;margin:6px 0;line-height:1.4}.cvb .n{font-size:26px;color:var(--g);font-weight:700}
 .qr{background:#fff;padding:6px;border-radius:8px;display:inline-block;color:var(--ink);font-size:12px}
 .qq{position:absolute;top:20px;left:30px;text-align:center;font-size:12px;color:var(--t)}
-@page{size:1123px 632px;margin:0}
+@page{size:9in 16in;margin:0}
 @media print{body{background:#fff}.panel{display:none}#pages{zoom:1!important}.pg{margin:0;box-shadow:none;break-after:page}}
 </style>
 </head>
@@ -92,13 +92,13 @@ function pages(){
  const row=(l,v)=>`<div class="rw"><b>${l}</b><span>${esc(v)||"................................"}</span></div>`;
  pg("البيانات الشخصية",`<div class="two"><div class="bx"><h3>بيانات سفير/ة الثقافة المؤسسية</h3>${row("الاسم",f.amb)}${row("الجوال",f.ambTel)}${row("البريد الإلكتروني",f.ambMail)}</div><div class="bx"><h3>بيانات مدير/ة المدرسة</h3>${row("الاسم",f.prin)}${row("الجوال",f.prinTel)}${row("بريد المدرسة الرسمي",f.prinMail)}</div></div><div class="bx" style="margin-top:18px">${row("اسم المدرسة",f.school)}</div>`);
  pg("فهرس الإنجازات",`<div class="ix">${SEC.map(([k,nn])=>`<div><span>${nn}</span><b>${S.sec[k].items.length}</b></div>`).join("")}</div>`);
- SEC.forEach(([k,nn])=>{const s=S.sec[k];for(let i=0;i<s.items.length;i+=3){const c=s.items.slice(i,i+3);
+ SEC.forEach(([k,nn])=>{const s=S.sec[k];for(let i=0;i<s.items.length;i+=2){const c=s.items.slice(i,i+2);
   pg(nn+(i?" (تابع)":""),`<div class="gr">${c.map(x=>`<div class="cd"><div class="im"><img src="${x.src}" alt=""></div>${x.cap?`<div class="ca">${esc(x.cap)}</div>`:""}</div>`).join("")}</div>`,!i&&s.link?`<div class="qq">${qr(s.link,70,"امسح للاطلاع على التوثيق")}</div>`:"")}});
  pg("ختام الملف",`<div style="text-align:center;margin-top:60px;font-size:24px;color:var(--t)">شكرًا لجهودكم في نشر الثقافة المؤسسية<div style="margin-top:20px;font-size:17px;color:var(--ink)">"ثقافتنا المؤسسية هي ما يميزنا عن الآخرين.. فلنكن سفراء لها ونصنع الفرق"</div>${f.share?`<div style="margin-top:24px">${qr(f.share,110,"")}</div>`:""}</div>`);
  $("pages").innerHTML=out.join("");
  document.querySelectorAll("[data-t]").forEach(el=>{if(window.QRCode)new QRCode(el,{text:el.dataset.t,width:+el.dataset.w,height:+el.dataset.w,correctLevel:QRCode.CorrectLevel.M});else el.textContent="QR"});
  fit()}
-const fit=()=>{$("pages").style.zoom=Math.min(1,(document.documentElement.clientWidth-32)/1123)};
+const fit=()=>{$("pages").style.zoom=Math.min(1,(document.documentElement.clientWidth-32)/720)};
 addEventListener("resize",fit);
 let portfolioOwner="device";
 const idb=()=>new Promise((r,j)=>{const q=indexedDB.open("safeer-portfolio:"+portfolioOwner,1);q.onupgradeneeded=()=>q.result.createObjectStore("s");q.onsuccess=()=>r(q.result);q.onerror=j});
@@ -106,7 +106,7 @@ async function saveDB(){try{(await idb()).transaction("s","readwrite").objectSto
 async function loadDB(){try{const d=await idb();return await new Promise(r=>{const q=d.transaction("s").objectStore("s").get("state");q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)})}catch(e){return null}}
 function upd(){clearTimeout(T);T=setTimeout(()=>{pages();saveDB()},250)}
 const msg=t=>{$("msg").textContent=t};
-async function makePDF(){pages();const z=$("pages").style.zoom;$("pages").style.zoom=1;try{await new Promise(r=>setTimeout(r,500));const {jsPDF}=window.jspdf,d=new jsPDF({orientation:"landscape",unit:"mm",format:[297,167.1]}),ps=[...document.querySelectorAll(".pg")];for(let i=0;i<ps.length;i++){msg(`جارٍ تجهيز الملف… ${i+1}/${ps.length}`);const c=await html2canvas(ps[i],{scale:1.5,backgroundColor:"#F7F9F8",useCORS:true});if(i)d.addPage([297,167.1],"landscape");d.addImage(c.toDataURL("image/jpeg",.85),"JPEG",0,0,297,167.1)}return d.output("blob")}finally{$("pages").style.zoom=z;fit()}}
+async function makePDF(){pages();const z=$("pages").style.zoom;$("pages").style.zoom=1;try{await new Promise(r=>setTimeout(r,500));const {jsPDF}=window.jspdf,d=new jsPDF({orientation:"portrait",unit:"mm",format:[228.6,406.4]}),ps=[...document.querySelectorAll(".pg")];for(let i=0;i<ps.length;i++){msg(`جارٍ تجهيز الملف… ${i+1}/${ps.length}`);const c=await html2canvas(ps[i],{scale:1.5,backgroundColor:"#F7F9F8",useCORS:true});if(i)d.addPage([228.6,406.4],"portrait");d.addImage(c.toDataURL("image/jpeg",.85),"JPEG",0,0,228.6,406.4)}return d.output("blob")}finally{$("pages").style.zoom=z;fit()}}
 const pname=()=>"ملف-إنجاز-"+(S.f.amb||"السفير")+".pdf";
 function save(b){const a=document.createElement("a");a.download=pname();a.href=URL.createObjectURL(b);a.click()}
 $("dl").onclick=async()=>{try{save(await makePDF());msg("تم تنزيل الملف.")}catch(e){msg("تعذّر إنشاء PDF.")}};
